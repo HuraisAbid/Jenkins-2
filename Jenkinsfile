@@ -1,17 +1,25 @@
 pipeline {
     agent {
-    docker {
-        image 'maven:3.9-eclipse-temurin-17'
-        args '--entrypoint="" -v /var/run/docker.sock:/var/run/docker.sock'
+        docker {
+            image 'docker:24.0.2-dind'   // Docker-in-Docker agent
+            args '--privileged'          // Needed for Docker daemon
+        }
     }
-}
-
 
     environment {
         DOCKER_IMAGE = "todo-app-image"
     }
 
     stages {
+
+        stage('Start Docker Daemon') {
+            steps {
+                sh '''
+                    dockerd-entrypoint.sh > /tmp/dockerd.log 2>&1 &
+                    sleep 5
+                '''
+            }
+        }
 
         stage('Checkout') {
             steps {
@@ -21,7 +29,10 @@ pipeline {
 
         stage('Build & Test') {
             steps {
-                sh "mvn clean package -DskipTests=false"
+                sh '''
+                    apk add maven openjdk17 --no-cache
+                    mvn clean package -DskipTests=false
+                '''
             }
             post {
                 always {
