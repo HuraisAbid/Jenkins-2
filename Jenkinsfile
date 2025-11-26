@@ -1,9 +1,9 @@
 pipeline {
-    agent {
-        docker {
-            image 'docker:24.0.2-dind'   // Docker-in-Docker agent
-            args '--privileged'          // Needed for Docker daemon
-        }
+
+    agent any   // uses your Jenkins VM
+
+    tools {
+        maven "Maven-3.9"
     }
 
     environment {
@@ -11,15 +11,6 @@ pipeline {
     }
 
     stages {
-
-        stage('Start Docker Daemon') {
-            steps {
-                sh '''
-                    dockerd-entrypoint.sh > /tmp/dockerd.log 2>&1 &
-                    sleep 5
-                '''
-            }
-        }
 
         stage('Checkout') {
             steps {
@@ -29,10 +20,7 @@ pipeline {
 
         stage('Build & Test') {
             steps {
-                sh '''
-                    apk add maven openjdk17 --no-cache
-                    mvn clean package -DskipTests=false
-                '''
+                sh "mvn clean package -DskipTests=false"
             }
             post {
                 always {
@@ -47,17 +35,12 @@ pipeline {
             }
         }
 
-        stage('Deploy Container') {
+        stage('Deploy') {
             steps {
                 sh "docker rm -f todo-app || true"
                 sh "docker run -d --name todo-app -p 8080:8080 ${DOCKER_IMAGE}"
             }
         }
 
-        stage('Archive JAR') {
-            steps {
-                archiveArtifacts artifacts: '**/target/*.jar', fingerprint: true
-            }
-        }
     }
 }
