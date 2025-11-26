@@ -1,6 +1,6 @@
 pipeline {
 
-    agent any   // uses your Jenkins VM
+    agent any   
 
     tools {
         maven "Maven-3.9"
